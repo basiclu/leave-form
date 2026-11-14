@@ -107,7 +107,8 @@
     </div>
     <div class="field">
       <label for="agent">職務代理人</label>
-      <input id="agent" maxlength="20" placeholder="代理人姓名">
+      <select id="agent"><option value="">（不需要代理人）</option></select>
+      <p class="hint">核准後系統會通知代理人。</p>
     </div>
 
     <button class="submit" id="submit" type="submit">送出申請</button>
@@ -179,6 +180,8 @@
       $('type').innerHTML = '<option value="">請選擇</option>' +
         types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
       renderBalance(d.name, d.balance);
+      $('agent').innerHTML = '<option value="">（不需要代理人）</option>' +
+        (d.colleagues || []).map(n => `<option value="${n}">${n}</option>`).join('');
 
       fillTimes();
       const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
