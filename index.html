@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>請假申請</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --navy: #1F3A5F; --ink: #1F2A3C; --muted: #6B778C; --line: #D8DEE8;
+    --mist: #EEF2F6; --paper: #FFFFFF; --warn: #B7791F; --error: #B42318; --ok: #1E6B45;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--mist); color: var(--ink);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; font-size: 16px; line-height: 1.6; }
+  body { padding: env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom)); }
+  main { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+
+  .balance { background: var(--navy); color: #fff; margin: 0 -16px 20px; padding: 24px 20px 20px; }
+  .balance .hello { margin: 0 0 12px; color: #C9D6E8; font-size: 15px; }
+  .balance .big { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+  .balance .big strong { font-size: 52px; line-height: 1; font-weight: 700; letter-spacing: -1px; }
+  .balance .big span { font-size: 16px; }
+  .balance .sub { margin: 6px 0 16px; color: #C9D6E8; font-size: 14px; }
+  .balance dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0;
+    border-top: 1px solid rgba(255,255,255,.2); padding-top: 14px; }
+  .balance dt { font-size: 12px; color: #C9D6E8; }
+  .balance dd { margin: 2px 0 0; font-size: 18px; font-weight: 500; }
+
+  form { background: var(--paper); border-radius: 14px; padding: 20px 16px; border: 1px solid var(--line); }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  label { display: block; font-size: 14px; font-weight: 500; margin: 0 0 6px; }
+  .field { margin-bottom: 18px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  select, input, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+  textarea { min-height: 76px; resize: vertical; }
+  select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+  .pair { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+  .chips { display: flex; gap: 8px; margin-bottom: 18px; }
+  .chips button { flex: 1; min-height: 40px; font: inherit; font-size: 14px; color: var(--navy);
+    background: var(--mist); border: 1px solid var(--line); border-radius: 20px; }
+  .chips button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .submit { width: 100%; min-height: 50px; font: inherit; font-weight: 700; font-size: 17px; color: #fff;
+    background: var(--navy); border: 0; border-radius: 10px; }
+  .submit:disabled { opacity: .5; }
+  .msg { margin: 0 0 16px; padding: 12px 14px; border-radius: 8px; font-size: 15px; }
+  .msg.error { background: #FDECEA; color: var(--error); }
+  .msg.ok { background: #E6F4EC; color: var(--ok); }
+  .loading { text-align: center; color: var(--muted); padding: 60px 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <p class="loading" id="loading">載入中…</p>
+
+  <section class="balance" id="balance" hidden aria-label="假別餘額">
+    <p class="hello" id="hello"></p>
+    <p class="big"><strong id="alDays">–</strong><span>天特休可用</span></p>
+    <p class="sub" id="alEnd"></p>
+    <dl>
+      <div><dt>事假＋家照</dt><dd id="pl">–</dd></div>
+      <div><dt>家庭照顧假</dt><dd id="fc">–</dd></div>
+      <div><dt>今年病假</dt><dd id="sick">–</dd></div>
+    </dl>
+  </section>
+
+  <p class="msg" id="msg" role="status" hidden></p>
+
+  <form id="form" hidden novalidate>
+    <h1>申請請假</h1>
+    <div class="field">
+      <label for="type">假別</label>
+      <select id="type" required></select>
+      <p class="hint" id="unitHint"></p>
+    </div>
+
+    <div class="chips" role="group" aria-label="快速選擇時段">
+      <button type="button" data-preset="day" aria-pressed="true">整天</button>
+      <button type="button" data-preset="am" aria-pressed="false">上午</button>
+      <button type="button" data-preset="pm" aria-pressed="false">下午</button>
+    </div>
+
+    <div class="field">
+      <label for="sDate">開始</label>
+      <div class="pair">
+        <input type="date" id="sDate" required>
+        <select id="sTime" aria-label="開始時間"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="eDate">結束</label>
+      <div class="pair">
+        <input type="date" id="eDate" required>
+        <select id="eTime" aria-label="結束時間"></select>
+      </div>
+      <p class="hint">上班時間 09:00～18:00，午休 12:00～13:00。假日與國定假日會自動扣除。</p>
+    </div>
+
+    <div class="field">
+      <label for="reason">事由</label>
+      <textarea id="reason" maxlength="200" placeholder="例如：家人就醫、出國旅遊"></textarea>
+    </div>
+    <div class="field">
+      <label for="agent">職務代理人</label>
+      <input id="agent" maxlength="20" placeholder="代理人姓名">
+    </div>
+
+    <button class="submit" id="submit" type="submit">送出申請</button>
+  </form>
+</main>
+
+<script>
+  // ===== 請改成你自己的設定 =====
+  const LIFF_ID = '2012614693-XYTZzFKD';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyDUailpjAO0C_SU4n0HQvf3zoBhPh66ZDugoaopFbHy27EPip_bjnwDMmEgxc3bBkdjw/exec';
+  // ==============================
+
+  const $ = id => document.getElementById(id);
+  const UNIT_HINT = { '日': '此假別以整天為單位', '半日': '此假別以半天為單位（上午或下午）', '小時': '此假別可以小時為單位' };
+  let types = [];
+
+  function showMsg(text, kind) {
+    const m = $('msg'); m.textContent = text; m.className = 'msg ' + kind; m.hidden = false;
+    m.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function api(action, data) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 避免跨網域預檢
+      body: JSON.stringify({ action, idToken: liff.getIDToken(), ...data }),
+    });
+    return res.json();
+  }
+
+  function fillTimes() {
+    const opts = [];
+    for (let h = 9; h <= 18; h++) for (const m of ['00', '30']) {
+      if (h === 18 && m === '30') continue;
+      const t = String(h).padStart(2, '0') + ':' + m;
+      opts.push(`<option value="${t}">${t}</option>`);
+    }
+    $('sTime').innerHTML = $('eTime').innerHTML = opts.join('');
+  }
+
+  function preset(kind) {
+    const [s, e] = { day: ['09:00', '18:00'], am: ['09:00', '12:00'], pm: ['13:00', '18:00'] }[kind];
+    $('sTime').value = s; $('eTime').value = e;
+    if (kind !== 'day' || !$('eDate').value || $('eDate').value < $('sDate').value) $('eDate').value = $('sDate').value;
+    document.querySelectorAll('.chips button').forEach(b => b.setAttribute('aria-pressed', b.dataset.preset === kind));
+  }
+
+  function renderBalance(name, b) {
+    $('hello').textContent = name + '，您好';
+    if (b) {
+      $('alDays').textContent = b.alDays;
+      $('alEnd').textContent = b.alEnd ? `使用期限至 ${b.alEnd}` : '';
+      $('pl').textContent = b.plHours + ' 小時';
+      $('fc').textContent = b.fcHours + ' 小時';
+      $('sick').textContent = b.sickDays + ' 天';
+    }
+    $('balance').hidden = false;
+  }
+
+  async function init() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      const d = await api('init');
+      $('loading').hidden = true;
+      if (!d.ok) { showMsg(d.error, 'error'); return; }
+
+      types = d.types;
+      $('type').innerHTML = '<option value="">請選擇</option>' +
+        types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
+      renderBalance(d.name, d.balance);
+
+      fillTimes();
+      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+      $('sDate').value = $('eDate').value = today;
+      preset('day');
+      $('form').hidden = false;
+    } catch (err) {
+      $('loading').hidden = true;
+      showMsg('無法載入，請關閉頁面後重新開啟。（' + err.message + '）', 'error');
+    }
+  }
+
+  $('type').addEventListener('change', () => {
+    const t = types.find(x => x.code === $('type').value);
+    $('unitHint').textContent = t ? UNIT_HINT[t.minUnit] || '' : '';
+  });
+  document.querySelectorAll('.chips button').forEach(b => b.addEventListener('click', () => preset(b.dataset.preset)));
+  $('sDate').addEventListener('change', () => { if ($('eDate').value < $('sDate').value) $('eDate').value = $('sDate').value; });
+
+  $('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    $('msg').hidden = true;
+    if (!$('type').value) { showMsg('請選擇假別。', 'error'); return; }
+    const start = `${$('sDate').value}T${$('sTime').value}`, end = `${$('eDate').value}T${$('eTime').value}`;
+    if (end <= start) { showMsg('結束時間必須晚於開始時間。', 'error'); return; }
+
+    $('submit').disabled = true; $('submit').textContent = '送出中…';
+    try {
+      const r = await api('apply', { type: $('type').value, start, end, reason: $('reason').value, agent: $('agent').value });
+      if (!r.ok) { showMsg(r.error, 'error'); return; }
+      $('form').hidden = true;
+      showMsg(`已送出，共 ${r.hours} 小時，單號 ${r.id}。` + (r.notified ? '已通知主管簽核，結果會用 LINE 通知您。' : '尚未設定簽核人，請通知 HR。'), 'ok');
+      setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 3000);
+    } catch (err) {
+      showMsg('送出失敗，請檢查網路後再試一次。', 'error');
+    } finally {
+      $('submit').disabled = false; $('submit').textContent = '送出申請';
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>
