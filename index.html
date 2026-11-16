@@ -157,7 +157,9 @@
     $('hello').textContent = name + '，您好';
     if (b) {
       $('alDays').textContent = b.alDays;
-      $('alEnd').textContent = b.alEnd ? `使用期限至 ${b.alEnd}` : '';
+      $('alEnd').textContent = b.carryDays > 0
+        ? `其中 ${b.carryDays} 天為上期遞延，請於 ${b.alEnd} 前休完`
+        : (b.alEnd ? `本期特休期間至 ${b.alEnd}` : '');
       $('pl').textContent = b.plHours + ' 小時';
       $('fc').textContent = b.fcHours + ' 小時';
       $('sick').textContent = b.sickDays + ' 天';
